@@ -100,6 +100,34 @@ class Loss:
         return 0.5 * np.where((y_pred - y_true)**2 - epsilon**2 > 0, 2 * (y_pred - y_true), 0)
 
 
+class Weights_Bias_Initializer:
+
+    def Weights_Initializer(self, num_layers, num_neurons, weights_type):
+        return [weights_type[i]((num_neurons[i+1], num_neurons[i])) for i in range(num_layers)]
+
+    def Bias_Initializer(self, num_layers, num_neurons, bias_type):
+        return [bias_type[i]((num_neurons[i+1], 1)) for i in range(num_layers)]
+
+
+    def Zero(self, shape):
+        return np.zeros(shape)
+
+    def Uniform(self, shape):
+        return np.random.rand(shape[0], shape[1])
+
+    def Normal(self, shape):
+        return np.random.randn(shape[0], shape[1])
+
+    def Kaiming(self, shape):
+        return np.random.randn(shape[0], shape[1]) * np.sqrt(2 / shape[0])
+
+    def He(self, shape):
+        return np.random.randn(shape[0], shape[1]) * np.sqrt(2 / shape[1])
+
+    def Xavier(self, shape):
+        return np.random.randn(shape[0], shape[1]) * np.sqrt(1 / shape[1])
+
+
 class Operations:
 
     def feed_forward(self, x, weights, bias, activation_functions, num_layers):
