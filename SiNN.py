@@ -40,6 +40,65 @@ class Activation:
         return np.identity(y.shape[0]) * (1 - y**2)
 
 
+class Loss:
+
+    def L2(y_true, y_pred):
+        return (y_pred - y_true)**2
+
+    def L2_derivative(y_true, y_pred):
+        return 2 * (y_pred - y_true)
+
+
+    def Cross_Entropy(y_true, y_pred):
+        gamma = 1e-8
+        return np.sum(y_true * np.log(y_pred + gamma))
+
+    def Cross_Entropy_derivative(y_true, y_pred):
+        gamma = 1e-8
+        return -y_true / (y_pred + gamma)
+
+
+    def Binary_Cross_Entropy(y_true, y_pred):
+        gamma = 1e-8
+        return -y_true * np.log(y_pred + gamma) - (1-y_true) * np.log(1 - y_pred + gamma)
+
+    def Binary_Cross_Entropy_derivative(y_true, y_pred):
+        gamma = 1e-8
+        return (y_pred - y_true) / ((y_pred + gamma) * (1 - y_pred + gamma))
+
+
+    def L1(y_true, y_pred):
+        return np.abs(y_pred - y_true)
+
+    def L1_derivative(y_true, y_pred):
+        return np.where(y_pred > y_true, 1, -1)
+
+
+    def Bias_Error(y_true, y_pred):
+        return y_pred - y_true
+
+    def Bias_Error_derivative(y_true, y_pred):
+        return np.ones(y_pred.shape)
+
+
+    def Huber(y_true, y_pred):
+        delta = 1
+        return np.where(np.abs(y_pred - y_true) < delta, 0.5 * (y_pred - y_true)**2, delta * np.abs(y_pred - y_true) - 0.5 * delta**2)
+
+    def Huber_derivative(y_true, y_pred):
+        delta = 1
+        return np.where(np.abs(y_pred - y_true) < delta, y_pred - y_true, delta * np.where(y_pred > y_true, 1, -1))
+
+
+    def Square_Epsilon_Hinge(y_true, y_pred):
+        epsilon = 0.5
+        return 0.5 * np.maximum(0, (y_pred - y_true)**2 - epsilon**2)
+
+    def Square_Epsilon_Hinge_derivative(y_true, y_pred):
+        epsilon = 0.5
+        return 0.5 * np.where((y_pred - y_true)**2 - epsilon**2 > 0, 2 * (y_pred - y_true), 0)
+
+
 class Operations:
 
     def feed_forward(x, weights, bias, activation_functions, num_layers):
@@ -63,7 +122,7 @@ class Operations:
         deltas = []
         for i in range(num_layers-1, -1, -1):
             if i == num_layers-1:
-                deltas.append(np.matmul(activation_functions_derivatives[i](outputs_y[i]).T, loss_function_derivative(outputs_y[i])))
+                deltas.append(np.matmul(activation_functions_derivatives[i](outputs_y[i]).T, loss_function_derivative(y, outputs_y[i])))
             else:
                 deltas.append(np.matmul(activation_functions_derivatives[i](outputs_y[i]).T, np.matmul(weights[i+1].T, deltas[-1])))
 
@@ -83,5 +142,3 @@ class Operations:
 
     def loss(y, y_pred, loss_function):
         return loss_function(y, y_pred)
-
-    
