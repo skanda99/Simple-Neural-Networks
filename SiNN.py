@@ -197,7 +197,7 @@ class Optimizers:
             grad_w_t = [grad_w / batch_size for grad_w in grad_w_t]
             grad_b_t = [grad_b / batch_size for grad_b in grad_b_t]
 
-            # updating weights
+
             for i in range(num_layers):
 
                 m_t_weights[i] = m_t_weights[i] * beta_1 + (1-beta_1) * grad_w_t[i]
@@ -206,7 +206,7 @@ class Optimizers:
                 v_t_hat_weights[i] = v_t_weights[i] / (1-beta_2**t)
                 weights[i] = weights[i] - learning_rate * m_t_hat_weights[i] / (v_t_hat_weights[i]**0.5 + epsilon)
 
-            # updating bias
+
             for i in range(num_layers):
 
                 m_t_bias[i] = m_t_bias[i] * beta_1 + (1-beta_1) * grad_b_t[i]
@@ -251,12 +251,51 @@ class Optimizers:
             grad_w_t = [grad_w / batch_size for grad_w in grad_w_t]
             grad_b_t = [grad_b / batch_size for grad_b in grad_b_t]
 
-            # updating weights
             for i in range(num_layers):
                 weights[i] = weights[i] - learning_rate * grad_w_t[i]
 
+            for i in range(num_layers):
+                bias[i] = bias[i] - learning_rate * grad_b_t[i]
 
-            # updating bias
+
+        return weights, bias, np.array(losses)
+
+
+    def train_BGD(self, X_train, y_train, weights, bias, activation_functions, activation_functions_derivatives, loss_function, loss_function_derivative, num_layers, learning_rate=0.01, epochs=1000):
+
+        oprt = Operations()
+        losses = []
+        num_samples = y_train.shape[1]
+
+        for t in range(1, epochs+1):
+
+            grad_w_t = [np.zeros(weights[i].shape) for i in range(num_layers)]
+            grad_b_t = [np.zeros(bias[i].shape) for i in range(num_layers)]
+
+            loss_t = 0
+
+            for i in range(num_samples):
+                outputs_z, outputs_y = oprt.feed_forward(X_train[:, i].reshape((-1, 1)), weights, bias, activation_functions, num_layers)
+                loss_t += loss_function(y_train[:, i].reshape((-1, 1)), outputs_y[-1])
+                grad_w, grad_b = oprt.back_propagation(X_train[:, i].reshape((-1, 1)), y_train[:, i].reshape((-1, 1)), outputs_z, outputs_y, weights, bias, activation_functions, activation_functions_derivatives, loss_function, loss_function_derivative, num_layers)
+
+                for j in range(num_layers):
+                    grad_w_t[j] += grad_w[j]
+                    grad_b_t[j] += grad_b[j]
+
+
+            loss_t /= num_samples
+            losses.append(loss_t)
+            print("Epoch: {} \t Loss: {}".format(t, loss_t))
+
+
+            grad_w_t = [grad_w / num_samples for grad_w in grad_w_t]
+            grad_b_t = [grad_b / num_samples for grad_b in grad_b_t]
+
+
+            for i in range(num_layers):
+                weights[i] = weights[i] - learning_rate * grad_w_t[i]
+
             for i in range(num_layers):
                 bias[i] = bias[i] - learning_rate * grad_b_t[i]
 
