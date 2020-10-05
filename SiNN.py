@@ -3,99 +3,130 @@ import numpy as np
 import random
 
 class Activation:
+    """ Commonly used activation functions and their derivatives """
 
     def Linear(self, x):
+        """ f(x) = x """
         return np.copy(x)
 
     def Linear_derivative(self, y):
+        """ f'(x) = 1 """
         return np.identity(y.shape[0])
 
 
     def Sigmoid(self, x):
+        """ Also known as Logistic function, f(x) = 1 / (1 + e^-x) """
         return 1 / (1 + np.exp(-x))
 
     def Sigmoid_derivative(self, y):
+        """ f'(x) = f(x) * (1 - f(x)) """
         return np.identity(y.shape[0]) * y * (1-y)
 
 
     def Softmax(self, x):
+        """ f(Xi) = e^Xi  / (SIGMA e^Xj) """
         x_ = x - np.max(x, axis=0)
         x_exp = np.exp(x_)
         return x_exp / np.sum(x_exp, axis=0)
 
     def Softmax_derivative(self, y):
+        """
+            d(f(Xi)) / dXj =  - Xi * Xj       , i != j
+                                Xi * (1 - Xi) ,  i = j
+        """
         return np.identity(y.shape[0]) * y - np.matmul(y, y.T)
 
 
     def ReLU(self, x):
+        """ f(x) = max(0, x) """
         return np.maximum(0, x)
 
     def ReLU_derivative(self, y):
+        """
+            f'(x) = 1, f(x) > 0
+                    0, else
+        """
         return np.identity(y.shape[0]) * np.where(y <= 0, 0, 1)
 
 
     def TanH(self, x):
+        """ Tangent Hyperbolic function """
         return np.tanh(x)
 
     def TanH_derivative(self, y):
+        """ Tangent Hyperbolic derivative """
         return np.identity(y.shape[0]) * (1 - y**2)
 
 
 class Loss:
 
     def L2(self, y_true, y_pred):
+        """ Mean squared error """
         return (y_pred - y_true)**2
 
     def L2_derivative(self, y_true, y_pred):
+        """ Derivative of mean square error """
         return 2 * (y_pred - y_true)
 
 
     def Cross_Entropy(self, y_true, y_pred):
+        """ Cross entropy loss for multiclass classification """
         gamma = 1e-8
         return -np.sum(y_true * np.log(y_pred + gamma))
 
     def Cross_Entropy_derivative(self, y_true, y_pred):
+        """ Derivative of cross entropy """
         gamma = 1e-8
         return -y_true / (y_pred + gamma)
 
 
     def Binary_Cross_Entropy(self, y_true, y_pred):
+        """ Binary cross entropy loss for binary classification """
         gamma = 1e-8
         return -y_true * np.log(y_pred + gamma) - (1-y_true) * np.log(1 - y_pred + gamma)
 
     def Binary_Cross_Entropy_derivative(self, y_true, y_pred):
+        """ Derivative of binary cross entropy """
         gamma = 1e-8
         return (y_pred - y_true) / ((y_pred + gamma) * (1 - y_pred + gamma))
 
 
     def L1(self, y_true, y_pred):
+        """ Mean absolute error """
         return np.abs(y_pred - y_true)
 
     def L1_derivative(self, y_true, y_pred):
+        """ Derivative of Mean absolute error """
         return np.where(y_pred > y_true, 1, -1)
 
 
     def Bias_Error(self, y_true, y_pred):
+        """ Mean bias error """
         return y_pred - y_true
 
     def Bias_Error_derivative(self, y_true, y_pred):
+        """ Derivative of mean bias error """
         return np.ones(y_pred.shape)
 
 
     def Huber(self, y_true, y_pred):
+        """ Huber loss for regression """
         delta = 1
         return np.where(np.abs(y_pred - y_true) < delta, 0.5 * (y_pred - y_true)**2, delta * np.abs(y_pred - y_true) - 0.5 * delta**2)
 
     def Huber_derivative(self, y_true, y_pred):
+        """ Derivative of huber loss """
         delta = 1
         return np.where(np.abs(y_pred - y_true) < delta, y_pred - y_true, delta * np.where(y_pred > y_true, 1, -1))
 
 
     def Square_Epsilon_Hinge(self, y_true, y_pred):
+        """ Square epsilon hinge loss for regression """
         epsilon = 0.5
         return 0.5 * np.maximum(0, (y_pred - y_true)**2 - epsilon**2)
 
     def Square_Epsilon_Hinge_derivative(self, y_true, y_pred):
+        """ Derivative of square epsilon hinge loss """
         epsilon = 0.5
         return 0.5 * np.where((y_pred - y_true)**2 - epsilon**2 > 0, 2 * (y_pred - y_true), 0)
 
@@ -103,35 +134,85 @@ class Loss:
 class Weights_Bias_Initializer:
 
     def Weights_Initializer(self, num_layers, num_neurons, weights_type):
+        """
+            Used to initialize weights according to the weights_type / kind.
+            num_layers: number of layers in NN
+            num_neurons: list type with elements indicating number of neurons in corresponding layers
+            weights_type: list type with elements referencing the type of initializer for corresponding layers
+        """
         return [weights_type[i]((num_neurons[i+1], num_neurons[i])) for i in range(num_layers)]
 
     def Bias_Initializer(self, num_layers, num_neurons, bias_type):
+        """
+            Used to initialize bias according to the bias_type / kind.
+            num_layers: number of layers in NN
+            num_neurons: list type with elements indicating number of neurons in corresponding layers
+            bias_type: list type with elements referencing the type of initializer for corresponding layers
+        """
         return [bias_type[i]((num_neurons[i+1], 1)) for i in range(num_layers)]
 
 
     def Zero(self, shape):
+        """
+            Initializes parameters of given shape with zeros.
+            shape: tuple (x, y) with x = num_neurons in ith layer
+                                     y = num_neurons in (i-1)th layer
+        """
         return np.zeros(shape)
 
     def Uniform(self, shape):
+        """
+            Initializes parameters of given shape with uniform distribution in [0, 1).
+            shape: tuple (x, y) with x = num_neurons in ith layer
+                                     y = num_neurons in (i-1)th layer
+        """
         return np.random.rand(shape[0], shape[1])
 
     def Normal(self, shape):
+        """
+            Initializes parameters of given shape with standard normal distribution.
+            shape: tuple (x, y) with x = num_neurons in ith layer
+                                     y = num_neurons in (i-1)th layer
+        """
         return np.random.randn(shape[0], shape[1])
 
     def Kaiming(self, shape):
+        """
+            Initializes parameters of given shape using Kaiming.
+            shape: tuple (x, y) with x = num_neurons in ith layer
+                                     y = num_neurons in (i-1)th layer
+        """
         return np.random.randn(shape[0], shape[1]) * np.sqrt(2 / shape[0])
 
     def He(self, shape):
+        """
+            Initializes parameters of given shape with He.
+            shape: tuple (x, y) with x = num_neurons in ith layer
+                                     y = num_neurons in (i-1)th layer
+        """
         return np.random.randn(shape[0], shape[1]) * np.sqrt(2 / shape[1])
 
     def Xavier(self, shape):
+        """
+            Initializes parameters of given shape with Xavier.
+            shape: tuple (x, y) with x = num_neurons in ith layer
+                                     y = num_neurons in (i-1)th layer
+        """
         return np.random.randn(shape[0], shape[1]) * np.sqrt(1 / shape[1])
 
 
 class Operations:
+    """ Some standard operations on NN """
 
     def feed_forward(self, x, weights, bias, activation_functions, num_layers):
-
+        """
+            used for getting Z's and Y's at every layer for a single sample.
+            x: single training sample vector
+            weights: list of weights for every layer
+            bias: list of bias for every layer
+            activation_functions: list of activation functions for every layer (elements are references to the functions)
+            num_layers: number of layers in NN
+        """
         outputs_z = []
         outputs_y = []
 
@@ -147,6 +228,20 @@ class Operations:
 
 
     def back_propagation(self, x, y, outputs_z, outputs_y, weights, bias, activation_functions, activation_functions_derivatives, loss_function, loss_function_derivative, num_layers):
+        """
+            Used to calculate gradients of Loss function wrt every weight and bias in NN.
+            x: single training sample vector
+            y: last layer output vector of corresponding training sample
+            outputs_z: list of outputs without activation function at every layer
+            outputs_y: list of outputs with activation function at every layer
+            weights: list of weights for every layer
+            bias: list of bias for every layer
+            activation_functions: list of activation functions for every layer (elements are references to the functions)
+            activation_functions_derivatives: list of activation functions derivatives for every layer (elements are references to the functions)
+            loss_function: Reference to loss function
+            loss_function_derivative: Reference to loss function derivative
+            num_layers: number of layers in NN
+        """
 
         deltas = []
         for i in range(num_layers-1, -1, -1):
@@ -170,6 +265,14 @@ class Operations:
 
 
     def predict(self, x, weights, bias, activation_functions, num_layers):
+        """
+            Used to predict the output of NN for a bulk of test cases
+            x: testing samples of shape -> (num_features, num_samples)
+            weights: list of weights for every layer
+            bias: list of bias for every layer
+            activation_functions: list of activation functions for every layer (elements are references to the functions)
+            num_layers: number of layers in NN
+        """
 
         num_samples = x.shape[1]
         predictions = [self.feed_forward(x[:, i].reshape((-1, 1)), weights, bias, activation_functions, num_layers) for i in range(num_samples)]
@@ -180,6 +283,21 @@ class Operations:
 class Optimizers:
 
     def train_Adam(self, X_train, y_train, weights, bias, activation_functions, activation_functions_derivatives, loss_function, loss_function_derivative, num_layers, batch_size=32, learning_rate=0.01, epochs=1000):
+        """
+            Adam optimizer for training NN
+            X_train: training samples of shape -> (num_features, num_samples)
+            y_train: training sample's outputs of shape -> (num_outputs, num_samples)
+            weights: list of weights for every layer
+            bias: list of bias for every layer
+            activation_functions: list of activation functions for every layer (elements are references to the functions)
+            activation_functions_derivatives: list of activation functions derivatives for every layer (elements are references to the functions)
+            loss_function: Reference to loss function
+            loss_function_derivative: Reference to loss function derivative
+            num_layers: number of layers in NN
+            batch_size: number of samples to use for weight updation
+            learning_rate: learning rate to use for gradient descent
+            epochs: number of epochs for training NN
+        """
 
         beta_1 = 0.9
         beta_2 = 0.999
@@ -248,6 +366,21 @@ class Optimizers:
 
 
     def train_SGD(self, X_train, y_train, weights, bias, activation_functions, activation_functions_derivatives, loss_function, loss_function_derivative, num_layers, batch_size=32, learning_rate=0.01, epochs=1000):
+        """
+            Stochastic gradient descent optimizer for training NN
+            X_train: training samples of shape -> (num_features, num_samples)
+            y_train: training sample's outputs of shape -> (num_outputs, num_samples)
+            weights: list of weights for every layer
+            bias: list of bias for every layer
+            activation_functions: list of activation functions for every layer (elements are references to the functions)
+            activation_functions_derivatives: list of activation functions derivatives for every layer (elements are references to the functions)
+            loss_function: Reference to loss function
+            loss_function_derivative: Reference to loss function derivative
+            num_layers: number of layers in NN
+            batch_size: number of samples to use for weight updation
+            learning_rate: learning rate to use for gradient descent
+            epochs: number of epochs for training NN
+        """
 
         oprt = Operations()
         losses = []
@@ -290,6 +423,20 @@ class Optimizers:
 
 
     def train_BGD(self, X_train, y_train, weights, bias, activation_functions, activation_functions_derivatives, loss_function, loss_function_derivative, num_layers, learning_rate=0.01, epochs=1000):
+        """
+            Batch gradient descent optimizer for training NN
+            X_train: training samples of shape -> (num_features, num_samples)
+            y_train: training sample's outputs of shape -> (num_outputs, num_samples)
+            weights: list of weights for every layer
+            bias: list of bias for every layer
+            activation_functions: list of activation functions for every layer (elements are references to the functions)
+            activation_functions_derivatives: list of activation functions derivatives for every layer (elements are references to the functions)
+            loss_function: Reference to loss function
+            loss_function_derivative: Reference to loss function derivative
+            num_layers: number of layers in NN
+            learning_rate: learning rate to use for gradient descent
+            epochs: number of epochs for training NN
+        """
 
         oprt = Operations()
         losses = []
