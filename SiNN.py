@@ -176,14 +176,6 @@ class Weights_Bias_Initializer:
         """
         return np.random.randn(shape[0], shape[1])
 
-    def Kaiming(self, shape):
-        """
-            Initializes parameters of given shape using Kaiming.
-            shape: tuple (x, y) with x = num_neurons in ith layer
-                                     y = num_neurons in (i-1)th layer
-        """
-        return np.random.randn(shape[0], shape[1]) * np.sqrt(2 / shape[0])
-
     def He(self, shape):
         """
             Initializes parameters of given shape with He.
