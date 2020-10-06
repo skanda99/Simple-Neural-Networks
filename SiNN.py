@@ -62,7 +62,7 @@ class Loss:
 
     def L2(self, y_true, y_pred):
         """ Mean squared error """
-        return (y_pred - y_true)**2
+        return np.sum((y_pred - y_true)**2)
 
     def L2_derivative(self, y_true, y_pred):
         """ Derivative of mean square error """
@@ -83,7 +83,7 @@ class Loss:
     def Binary_Cross_Entropy(self, y_true, y_pred):
         """ Binary cross entropy loss for binary classification """
         gamma = 1e-8
-        return -y_true * np.log(y_pred + gamma) - (1-y_true) * np.log(1 - y_pred + gamma)
+        return np.sum(-y_true * np.log(y_pred + gamma) - (1-y_true) * np.log(1 - y_pred + gamma))
 
     def Binary_Cross_Entropy_derivative(self, y_true, y_pred):
         """ Derivative of binary cross entropy """
@@ -93,7 +93,7 @@ class Loss:
 
     def L1(self, y_true, y_pred):
         """ Mean absolute error """
-        return np.abs(y_pred - y_true)
+        return np.sum(np.abs(y_pred - y_true))
 
     def L1_derivative(self, y_true, y_pred):
         """ Derivative of Mean absolute error """
@@ -102,7 +102,7 @@ class Loss:
 
     def Bias_Error(self, y_true, y_pred):
         """ Mean bias error """
-        return y_pred - y_true
+        return np.sum(y_pred - y_true)
 
     def Bias_Error_derivative(self, y_true, y_pred):
         """ Derivative of mean bias error """
@@ -112,7 +112,7 @@ class Loss:
     def Huber(self, y_true, y_pred):
         """ Huber loss for regression """
         delta = 1
-        return np.where(np.abs(y_pred - y_true) < delta, 0.5 * (y_pred - y_true)**2, delta * np.abs(y_pred - y_true) - 0.5 * delta**2)
+        return np.sum(np.where(np.abs(y_pred - y_true) < delta, 0.5 * (y_pred - y_true)**2, delta * np.abs(y_pred - y_true) - 0.5 * delta**2))
 
     def Huber_derivative(self, y_true, y_pred):
         """ Derivative of huber loss """
@@ -123,12 +123,22 @@ class Loss:
     def Square_Epsilon_Hinge(self, y_true, y_pred):
         """ Square epsilon hinge loss for regression """
         epsilon = 0.5
-        return 0.5 * np.maximum(0, (y_pred - y_true)**2 - epsilon**2)
+        return np.sum(0.5 * np.maximum(0, (y_pred - y_true)**2 - epsilon**2))
 
     def Square_Epsilon_Hinge_derivative(self, y_true, y_pred):
         """ Derivative of square epsilon hinge loss """
         epsilon = 0.5
         return 0.5 * np.where((y_pred - y_true)**2 - epsilon**2 > 0, 2 * (y_pred - y_true), 0)
+
+
+    def Dice(self, y_true, y_pred):
+        """ Dice loss for classification """
+        D = 2 * np.sum(y_pred * y_true) / np.sum(y_pred**2 + y_true**2)
+        return 1 - D
+
+    def Dice_derivative(self, y_true, y_pred):
+        """ Derivative of Dice loss """
+        return 2 * y_true * (y_pred**2 - y_true**2) / (y_pred**2 + y_true**2)**2
 
 
 class Weights_Bias_Initializer:
