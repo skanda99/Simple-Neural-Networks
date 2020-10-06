@@ -59,6 +59,9 @@ class Activation:
 
 
 class Loss:
+    """
+        Commonly used loss functions and their derivatives
+    """
 
     def L2(self, y_true, y_pred):
         """ Mean squared error """
@@ -142,6 +145,9 @@ class Loss:
 
 
 class Weights_Bias_Initializer:
+    """
+        Different weights and bias initializers
+    """
 
     def Weights_Initializer(self, num_layers, num_neurons, weights_type):
         """
@@ -201,6 +207,69 @@ class Weights_Bias_Initializer:
                                      y = num_neurons in (i-1)th layer
         """
         return np.random.randn(shape[0], shape[1]) * np.sqrt(1 / shape[1])
+
+
+class Classification_Metrics:
+    """
+        some standard classification metrics
+    """
+
+    def convert_binary(self, y_pred):
+        """ Used for converting predicted probabilities to binary values """
+        y_pred_ = np.zeros(y_pred.shape)
+
+        if y_pred.shape[1] == 1:
+            y_pred_[y_pred >= 0.5] = 1
+        else:
+            y_pred_[np.arange(y_pred.shape[0]), np.argmax(y_pred, axis=1)] = 1
+
+        return y_pred_
+
+
+    def true_positives(self, y_true, y_pred):
+        """ calculates true positives in every class """
+        y_pred_ = self.convert_binary(y_pred)
+        return np.sum(np.logical_and(y_pred_==1, y_true==1), axis=0)
+
+    def true_negatives(self, y_true, y_pred):
+        """ calculates true negatives in every class """
+        y_pred_ = self.convert_binary(y_pred)
+        return np.sum(np.logical_and(y_pred_==0, y_true==0), axis=0)
+
+    def false_positives(self, y_true, y_pred):
+        """ calculates false positives in every class """
+        y_pred_ = self.convert_binary(y_pred)
+        return np.sum(np.logical_and(y_pred_==1, y_true==0), axis=0)
+
+    def false_negatives(self, y_true, y_pred):
+        """ calculates false negatives in every class """
+        y_pred_ = self.convert_binary(y_pred)
+        return np.sum(np.logical_and(y_pred_==0, y_true==1), axis=0)
+
+
+    def Sensitivity(self, y_true, y_pred):
+        """ calculates Sensitivity / Recall / True Postive rate """
+        tp = self.true_positives(y_true, y_pred).astype('float64')
+        fn = self.false_negatives(y_true, y_pred).astype('float64')
+        return tp / (tp + fn)
+
+    def Specificity(self, y_true, y_pred):
+        """ calculates Specificity """
+        tn = self.true_negatives(y_true, y_pred).astype('float64')
+        fp = self.false_positives(y_true, y_pred).astype('float64')
+        return tn / (tn + fp)
+
+    def Precision(self, y_true, y_pred):
+        """ Calculates precision """
+        tp = self.true_positives(y_true, y_pred).astype('float64')
+        fp = self.false_positives(y_true, y_pred).astype('float64')
+        return tp / (tp + fp)
+
+    def F1_score(self, y_true, y_pred):
+        """ Calculates F1 score """
+        p = self.Precision(y_true, y_pred).astype('float64')
+        r = self.Sensitivity(y_true, y_pred).astype('float64')
+        return 2 * p * r / (p + r)
 
 
 class Operations:
@@ -283,8 +352,12 @@ class Operations:
 
 
 class Optimizers:
+    """
+        Standard optimizers used for training NN
+    """
 
-    def train_Adam(self, X_train, y_train, weights, bias, activation_functions, activation_functions_derivatives, loss_function, loss_function_derivative, num_layers, batch_size=32, learning_rate=0.01, epochs=1000):
+    def train_Adam(self, X_train, y_train, weights, bias, activation_functions, activation_functions_derivatives,
+                   loss_function, loss_function_derivative, num_layers, batch_size=32, learning_rate=0.01, epochs=1000, roc=False):
         """
             Adam optimizer for training NN
             X_train: training samples of shape -> (num_features, num_samples)
@@ -299,6 +372,7 @@ class Optimizers:
             batch_size: number of samples to use for weight updation
             learning_rate: learning rate to use for gradient descent
             epochs: number of epochs for training NN
+            roc: boolean indicating requirement of ROC curve for TRAINING set (classification only)
         """
 
         beta_1 = 0.9
@@ -318,6 +392,11 @@ class Optimizers:
         oprt = Operations()
         losses = []
         num_samples = y_train.shape[1]
+
+        if roc:
+            ROC = []
+            cm = Classification_Metrics()
+
 
         for t in range(1,epochs+1):
 
@@ -363,11 +442,18 @@ class Optimizers:
                 v_t_hat_bias[i] = v_t_bias[i] / (1-beta_2**t)
                 bias[i] = bias[i] - learning_rate * m_t_hat_bias[i] / (v_t_hat_bias[i]**0.5 + epsilon)
 
+            if roc:
+                y_pred = oprt.predict(X_train, weights, bias, activation_functions, num_layers)
+                ROC.append([1 - cm.Specificity(y_train.T, y_pred), cm.Sensitivity(y_train.T, y_pred)])
+
+        if roc:
+            return weights, bias, np.array(losses), np.array(ROC)
 
         return weights, bias, np.array(losses)
 
 
-    def train_SGD(self, X_train, y_train, weights, bias, activation_functions, activation_functions_derivatives, loss_function, loss_function_derivative, num_layers, batch_size=32, learning_rate=0.01, epochs=1000):
+    def train_SGD(self, X_train, y_train, weights, bias, activation_functions, activation_functions_derivatives, loss_function,
+                  loss_function_derivative, num_layers, batch_size=32, learning_rate=0.01, epochs=1000, roc=False):
         """
             Stochastic gradient descent optimizer for training NN
             X_train: training samples of shape -> (num_features, num_samples)
@@ -382,11 +468,16 @@ class Optimizers:
             batch_size: number of samples to use for weight updation
             learning_rate: learning rate to use for gradient descent
             epochs: number of epochs for training NN
+            roc: boolean indicating requirement of ROC curve for TRAINING set (classification only)
         """
 
         oprt = Operations()
         losses = []
         num_samples = y_train.shape[1]
+
+        if roc:
+            ROC = []
+            cm = Classification_Metrics()
 
         for t in range(1,epochs+1):
 
@@ -420,11 +511,19 @@ class Optimizers:
             for i in range(num_layers):
                 bias[i] = bias[i] - learning_rate * grad_b_t[i]
 
+            if roc:
+                y_pred = oprt.predict(X_train, weights, bias, activation_functions, num_layers)
+                ROC.append([1 - cm.Specificity(y_train.T, y_pred), cm.Sensitivity(y_train.T, y_pred)])
+
+
+        if roc:
+            return weights, bias, np.array(losses), np.array(ROC)
 
         return weights, bias, np.array(losses)
 
 
-    def train_BGD(self, X_train, y_train, weights, bias, activation_functions, activation_functions_derivatives, loss_function, loss_function_derivative, num_layers, learning_rate=0.01, epochs=1000):
+    def train_BGD(self, X_train, y_train, weights, bias, activation_functions, activation_functions_derivatives,
+                  loss_function, loss_function_derivative, num_layers, learning_rate=0.01, epochs=1000, roc=False):
         """
             Batch gradient descent optimizer for training NN
             X_train: training samples of shape -> (num_features, num_samples)
@@ -438,11 +537,16 @@ class Optimizers:
             num_layers: number of layers in NN
             learning_rate: learning rate to use for gradient descent
             epochs: number of epochs for training NN
+            roc: boolean indicating requirement of ROC curve for TRAINING set (classification only)
         """
 
         oprt = Operations()
         losses = []
         num_samples = y_train.shape[1]
+
+        if roc:
+            ROC = []
+            cm = Classification_Metrics()
 
         for t in range(1, epochs+1):
 
@@ -476,5 +580,12 @@ class Optimizers:
             for i in range(num_layers):
                 bias[i] = bias[i] - learning_rate * grad_b_t[i]
 
+            if roc:
+                y_pred = oprt.predict(X_train, weights, bias, activation_functions, num_layers)
+                ROC.append([1 - cm.Specificity(y_train.T, y_pred), cm.Sensitivity(y_train.T, y_pred)])
+
+
+        if roc:
+            return weights, bias, np.array(losses), np.array(ROC)
 
         return weights, bias, np.array(losses)
